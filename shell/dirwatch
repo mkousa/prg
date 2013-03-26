@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# Show new files/directories under the directory given as the
+# first argument. File contents is also displayed.
+
+if [ -z "$1" ];then
+ echo "Usage: $0 directory"
+ exit 1
+fi
+
+ls -1 "$1" > /tmp/dw1_new
+cp /tmp/dw1_new /tmp/dw1_old
+
+while true;do
+ diff /tmp/dw1_old /tmp/dw1_new | grep '^> ' | cut -c 3- > /tmp/dw1_diff
+ if [ -s /tmp/dw1_diff ];then
+  while IFS= read -r filename;do
+   echo "$1/$filename"
+   if [ -d "$1/$filename" ];then
+    echo "(a new directory)"
+   else
+    cat "$1/$filename"
+   fi
+   echo
+  done < /tmp/dw1_diff #| mail -s "New files in $1 on $(date)" someuser@host
+ fi
+ cp /tmp/dw1_new /tmp/dw1_old
+ sleep 5
+ ls -1 "$1" > /tmp/dw1_new
+done
+
