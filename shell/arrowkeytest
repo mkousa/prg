@@ -1,0 +1,59 @@
+#!/bin/bash
+
+# A simple script that reads one character at a time and
+# which tries to find out when an arrow key was pressed.
+#
+# man terminfo, man tput
+
+up=$(echo -en "\033[A")
+down=$(echo -en "\033[B")
+left=$(echo -en "\033[D")
+right=$(echo -en "\033[C")
+
+while read -s -n 1 k1
+do
+ # Assume if we read two chars \033 and [ consecutively it
+ # will mean an escape sequence is about to come
+ if [ "$k1" = "$(echo -en "\033")" ];then
+  k3="$k2"
+  k2="$k1"
+  continue
+ elif [ "$k2" = "$(echo -en "\033")" -a "$k1" = "[" ];then
+  k3="$k2"
+  k2="$k1"
+  continue
+ fi
+
+  # See if there is now formed a three char long escape sequence we
+  # can handle. Currently other lenght sequences are not handled at all.
+  known_esc_seq=1
+  last_three_keys="$k3$k2$k1"
+
+  case "$last_three_keys" in
+   "$up")
+    echo "UP"
+    ;;
+   "$down")
+    echo "DOWN"
+    ;;
+   "$left")
+    echo "LEFT"
+    ;;
+   "$right")
+    echo "RIGHT"
+    ;;
+   *)
+    # any other not handled escape sequence
+    known_esc_seq=0
+    ;;
+  esac
+
+ # If there was not a known escape sequence then process the
+ # last read key (the previous \033 and [ will be ignored)
+ if [ $known_esc_seq -eq 0 ];then
+  echo "handle key '$k1'"
+ fi
+
+ k3="$k2"
+ k2="$k1"
+done
