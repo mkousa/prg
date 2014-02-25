@@ -1,0 +1,51 @@
+#!/bin/bash
+
+funcs()
+{
+  local tmp funcname
+  declare -F | while read -r tmp tmp funcname;do
+    echo "$funcname"
+  done
+}
+
+newfuncs_file()
+{
+  eval local list1=(\${$1[@]})
+  eval local list2=(\${$2[@]})
+  local i1 i2 found
+
+  for i1 in "${list2[@]}";do
+    found=0
+    for i2 in "${list1[@]}";do
+      #echo "1=$i1 2=$i2"
+      [[ $i1 = $i2 ]] && { found=1; break; }
+    done
+    [[ $found = 0 ]] && echo "$i1"
+  done
+}
+
+list1=($(funcs))
+source "$1" >/dev/null 2>&1 || exit $?
+list2=($(funcs))
+newfuncs=($(newfuncs_file list1 list2))
+echo "functions in $1: ${newfuncs[*]}"
+
+declare -A seen
+
+funcbody()
+{
+  declare -f "$1" | tail -n +3 | head -n -1
+}
+
+for f1 in "${newfuncs[@]}";do
+  for f2 in "${newfuncs[@]}";do
+    #echo "seen=${!seen[@]}"
+    [[ "$f1" = "$f2" || "${seen[${f1}_$f2]}" = 1 || "${seen[${f2}_$f1]}" = 1 ]] && continue
+    seen[${f1}_$f2]=1
+    seen[${f2}_$f1]=1
+    #echo "declf1 $f1";funcbody "$f1";echo "declf2 $f2";funcbody "$f2"
+    echo
+    echo "diff $f1 -> $f2:"
+    diff -U 0 <(funcbody "$f1") <(funcbody "$f2") | tail -n +3
+  done
+done
