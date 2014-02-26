@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# Usage: funcrefactor file
+
+# file must contain only function declarations
+
+# funcrefactor funcfile | grep effort |sort -n -k 14
+
 funcs()
 {
   local tmp funcname
@@ -17,7 +23,6 @@ newfuncs_file()
   for i1 in "${list2[@]}";do
     found=0
     for i2 in "${list1[@]}";do
-      #echo "1=$i1 2=$i2"
       [[ $i1 = $i2 ]] && { found=1; break; }
     done
     [[ $found = 0 ]] && echo "$i1"
@@ -25,27 +30,37 @@ newfuncs_file()
 }
 
 list1=($(funcs))
-source "$1" >/dev/null 2>&1 || exit $?
+source "$1" >/dev/null 2>&1 || exit 1
 list2=($(funcs))
 newfuncs=($(newfuncs_file list1 list2))
 echo "functions in $1: ${newfuncs[*]}"
 
-declare -A seen
-
-funcbody()
-{
-  declare -f "$1" | tail -n +3 | head -n -1
-}
+if [ ${BASH_VERSINFO[0]} -eq 4 ];then
+  declare -A seen
+fi
 
 for f1 in "${newfuncs[@]}";do
   for f2 in "${newfuncs[@]}";do
+    eval "lines_$f2=$(( $(declare -f $f2 | wc -l) - 3))"
     #echo "seen=${!seen[@]}"
-    [[ "$f1" = "$f2" || "${seen[${f1}_$f2]}" = 1 || "${seen[${f2}_$f1]}" = 1 ]] && continue
-    seen[${f1}_$f2]=1
-    seen[${f2}_$f1]=1
-    #echo "declf1 $f1";funcbody "$f1";echo "declf2 $f2";funcbody "$f2"
+    if [ ${BASH_VERSINFO[0]} -eq 4 ];then
+      [[ "$f1" = "$f2" || "${seen[${f1}_$f2]}" = 1 || "${seen[${f2}_$f1]}" = 1 ]] && continue
+      seen[${f1}_$f2]=1
+      seen[${f2}_$f1]=1
+    else
+      eval "[[ $f1 = $f2 || \${${f1}_$f2} || \${${f2}_$f1} ]]" && continue
+      eval ${f1}_$f2=1
+      eval ${f2}_$f1=1
+    fi
+    #echo "declf1 $f1";declare -f "$f1"|tail -n +3|head -n -1|sed 's/;$//';echo "declf2 $f2";declare -f "$f2"|tail -n +3|head -n -1|sed 's/;$//'
     echo
-    echo "diff $f1 -> $f2:"
-    diff -U 0 <(funcbody "$f1") <(funcbody "$f2") | tail -n +3
+    d=$(diff -U 0 <(declare -f "$f1"|tail -n +3|head -n -1|sed 's/;$//') <(declare -f "$f2"|tail -n +3|head -n -1|sed 's/;$//') | tail -n +3)
+    adds=$(echo "$d"|grep -c ^+)
+    dels=$(echo "$d"|grep -c ^-)
+    eval l1=\$lines_$f1
+    eval l2=\$lines_$f2
+    effort=$((100*($adds+$dels)/$l1)) # better algorithm ?
+    echo "diff $f1 ($l1 lines) -> $f2 ($l2 lines): $adds adds, $dels dels, effort% $effort"
+    echo "$d"
   done
 done
