@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# needs bash 4.x for now
+
+[ ! -e "$1" ] && { echo "File not given or it does not exist"; exit 1; }
+
+PS3="select a file/dir to extract or q to quit: "
+t="$1"
+[ "$t" != "${t%.tgz}" -o "$t" != "${t%.gz}" ] && gz="z"
+mapfile -t a < <(tar tf${gz} "$t")
+
+select f in "${a[@]}";do
+ if [ "$REPLY" = "q" ];then
+  break
+ elif [ "$f" ];then
+  tar x${gz}vv -f "$t" -T <(echo "$f")
+ else
+  echo "no file/dir selected"
+ fi
+done
