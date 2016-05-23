@@ -1,0 +1,21 @@
+#!/bin/bash
+set - 1 2 3
+d(){
+$e;for y;do for x;do $e -n ${b[y*3+x]-.};done;$e;done
+}
+e=echo
+d $@
+while((p=p%2+1,n++-9));do
+until read -p"Player $p:x y?" x y;((y*x*!b[i=y*3+x]));do :;done
+b[i]=$p
+d $@
+for y;do
+for j in i=y*3+1,++i,++i 3+y,6+y,9+y 4,8,12 10,8,6;do
+o=
+for k in ${j//,/ };do
+((b[k]==p&&++o>2))&&$e Player $p won&&exit
+done
+done
+done
+done
+$e Draw
