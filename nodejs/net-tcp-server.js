@@ -12,10 +12,17 @@ function listen_cb() {
 function connection_cb(socket) {
     console.log("connection cb, socket:", socket);
     socket.write(Date() + " uptime=" + os.uptime() + "\n");
+    server.getConnections(function (err, count) {
+        if (err) {
+            console.log(err);
+        } else {
+            socket.write("getConnections=" + count + "\n");
+        }
+    });
 }
 
 function close_cb() {
-    console.log("close cb");
+    console.log("close cb, closing server");
 }
 
 function error_cb(err) {
